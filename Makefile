@@ -26,9 +26,6 @@ logs:
 ps:
 	docker compose ps
 
-# Run tests
-test:
-	docker compose exec app pytest
 
 # Clean up containers and volumes
 clean:

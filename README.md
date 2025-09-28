@@ -22,20 +22,25 @@ An AI-driven 3D printing monitoring system that provides real-time failure detec
 
 ### Using Docker (Recommended)
 
-1. **Build and run the system:**
+1. **Build images:**
 
    ```bash
    make build
+   ```
+
+2. **Start the stack (auto-runs migrations and seeds from CSV):**
+
+   ```bash
    make run
    ```
 
-2. **Initialize the database:**
+3. **(Optional) Generate demo images:**
 
    ```bash
-   make setup-db
+   make samples
    ```
 
-3. **Access the applications:**
+4. **Access the applications:**
    - API Documentation: http://localhost:8000/docs
    - Web Interface: http://localhost:8502
 
@@ -57,6 +62,7 @@ An AI-driven 3D printing monitoring system that provides real-time failure detec
    poetry run alembic upgrade head
 
    # Initialize sample data
+   # (generates demo images in data/sample_images)
    poetry run python scripts/init_data.py
    ```
 
@@ -74,26 +80,43 @@ An AI-driven 3D printing monitoring system that provides real-time failure detec
 
 ### Printers
 
-- `GET /api/v1/printers` - List all printers
-- `POST /api/v1/printers` - Create new printer
-- `GET /api/v1/printers/{id}` - Get printer details
-- `PUT /api/v1/printers/{id}/status` - Update printer status
+- `GET /api/v1/printers` — List active printers
+- `POST /api/v1/printers` — Create new printer
+- `GET /api/v1/printers/{printer_id}` — Get printer details
+- `PUT /api/v1/printers/{printer_id}/status` — Update printer status
+- `POST /api/v1/printers/{printer_id}/activate` — Reactivate (set to idle)
 
 ### Jobs
 
-- `GET /api/v1/jobs` - List active jobs
-- `POST /api/v1/jobs` - Create new job
-- `POST /api/v1/jobs/{id}/start` - Start job
-- `POST /api/v1/jobs/{id}/progress` - Update job progress
-- `POST /api/v1/jobs/{id}/complete` - Complete job
-- `POST /api/v1/jobs/{id}/failure-detection` - Upload image for failure detection
+- `GET /api/v1/jobs` — List active jobs
+- `POST /api/v1/jobs` — Create new job
+- `GET /api/v1/jobs/{job_id}` — Get job by external ID
+- `DELETE /api/v1/jobs/{job_id}` — Delete a queued job
+- `POST /api/v1/jobs/{job_id}/start` — Start job
+- `POST /api/v1/jobs/{job_id}/progress` — Update job progress
+- `POST /api/v1/jobs/{job_id}/complete` — Complete job
+- `POST /api/v1/jobs/{job_id}/failure-detection` — Upload image for failure detection
+- `POST /api/v1/jobs/{job_id}/verify` — Verify a single frame (same as detection)
+- `GET /api/v1/jobs/by-job/{job_id}/failures` — Failure events for job
+- `GET /api/v1/jobs/failure-events` — All failure events (global)
 
 ### Inventory
 
-- `GET /api/v1/inventory/spools` - List all spools
-- `POST /api/v1/inventory/spools` - Create new spool
-- `POST /api/v1/inventory/spools/usage` - Update spool usage
-- `GET /api/v1/inventory/alerts` - Get inventory alerts
+- `GET /api/v1/inventory/spools` — List active spools
+- `GET /api/v1/inventory/spools/all` — List all spools (incl. inactive)
+- `GET /api/v1/inventory/spools/{spool_id}` — Get spool
+- `POST /api/v1/inventory/spools` — Create new spool
+- `POST /api/v1/inventory/spools/usage` — Update spool usage
+- `GET /api/v1/inventory/alerts` — Active inventory alerts
+- `GET /api/v1/inventory/alerts/low-inventory` — Low-inventory spools
+- `POST /api/v1/inventory/alerts/{alert_id}/resolve` — Resolve alert
+- `POST /api/v1/inventory/spools/{spool_id}/activate` — Reactivate spool
+- `POST /api/v1/inventory/spools/{spool_id}/deactivate` — Deactivate spool
+
+### System
+
+- `GET /` — Root
+- `GET /health` — Health check
 
 ## AI Failure Detection
 
@@ -128,7 +151,21 @@ Key configuration options in `app/core/config.py`:
 - `failure_detection_threshold`: AI confidence threshold (default: 0.7)
 - `inventory_alert_threshold`: Low inventory threshold (default: 0.15 = 15%)
 - `database_url`: PostgreSQL connection string
-- `data_dir`: Directory for storing images and logs
+- `data_dir`: Data directory (images, frames)
+- `logs_dir`: Logs directory
+- `sample_images_dir`: Directory for generated demo images
+- `frame_warmup_seconds`: Delay before first frame checks
+- `frame_interval_seconds`: Interval between frame checks
+
+Environment variables can override these settings (see `.env`).
+
+## Data Seeding
+
+- On startup, the API seeds initial data from CSVs if present:
+  - `data/seed/printers.csv`
+  - `data/seed/spools.csv`
+- The Docker setup mounts `./data` into the container; place CSVs there before starting.
+- Demo/sample images are generated via `make samples` (or by running `scripts/init_data.py`).
 
 ## Development
 
@@ -140,12 +177,6 @@ make migration message="Description of changes"
 
 # Apply migrations
 make migrate
-```
-
-### Testing
-
-```bash
-make test
 ```
 
 ### Code Quality
@@ -169,14 +200,42 @@ poetry run flake8 app/
 │   ├── core/                # Configuration
 │   ├── db/                  # Database setup
 │   ├── models/              # SQLAlchemy models
-│   ├── schemas/              # Pydantic schemas
+│   ├── schemas/             # Pydantic schemas
 │   ├── services/            # Business logic
 │   └── streamlit_app.py     # Web interface
+├── data/                    # Mounted data (sample_images, seed CSVs)
+├── logs/                    # Logs (mounted)
 ├── scripts/                 # Utility scripts
-├── docker compose.yml       # Docker configuration
+├── docker-compose.yml       # Docker configuration
 ├── Dockerfile              # Container definition
 ├── Makefile                # Build automation
 └── pyproject.toml          # Dependencies
+```
+
+## Makefile Commands
+
+```bash
+# Build and run
+make build          # Build images
+make run            # Start stack (app, db, streamlit) + follow logs
+make down           # Stop stack
+
+# Logs and status
+make logs           # Tail logs
+make ps             # Show service status
+
+# Database
+make migrate        # Apply migrations in running app container
+make migration message="Description"  # Create new autogenerate migration
+
+# Local (without Docker)
+make install        # poetry install
+make local          # uvicorn app.main:app --reload
+make streamlit-local
+
+# Utilities
+make clean          # Remove containers/volumes and prune
+make samples        # Generate demo images into data/sample_images
 ```
 
 ## License
