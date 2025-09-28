@@ -1,0 +1,11 @@
+spool_id,material_type,color,brand,total_weight_g
+SPOOL-001,PLA,White,Generic,1000
+SPOOL-002,PLA,Black,Generic,1000
+SPOOL-003,PLA,Blue,Generic,1000
+SPOOL-004,PLA,Red,Generic,1000
+SPOOL-005,PLA,Green,Generic,1000
+SPOOL-006,PLA,Yellow,Generic,1000
+SPOOL-007,PLA,Orange,Generic,1000
+SPOOL-008,PLA,Purple,Generic,1000
+SPOOL-009,PLA,Gray,Generic,1000
+SPOOL-010,PLA,Silver,Generic,1000

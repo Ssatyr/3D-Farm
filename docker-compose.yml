@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: 3d_ocean
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    command: bash -lc "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app --reload-dir alembic"
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/3d_ocean
+      WATCHFILES_FORCE_POLLING: "true"
+    depends_on:
+      - db
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./data/seed:/app/data/seed
+      - ./logs:/app/logs
+
+  streamlit:
+    build: .
+    command: streamlit run app/streamlit_app.py --server.port 8502 --server.address 0.0.0.0 --server.runOnSave true
+    ports:
+      - "8502:8502"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/3d_ocean
+      API_BASE_URL: http://app:8000/api/v1
+      STREAMLIT_SERVER_RUN_ON_SAVE: "true"
+    depends_on:
+      - db
+      - app
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+      - ./data/seed:/app/data/seed
+      - ./logs:/app/logs
+
+volumes:
+  postgres_data:

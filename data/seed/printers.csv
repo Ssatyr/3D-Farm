@@ -1,0 +1,7 @@
+serial_no,machine_name,location,model,max_bed_temp,max_nozzle_temp,status
+SN-PR-001,Printer-1,Lab A,Generic,100,260,idle
+SN-PR-002,Printer-2,Lab A,Generic,100,260,idle
+SN-PR-003,Printer-3,Lab B,Generic,100,260,idle
+SN-PR-004,Printer-4,Lab B,Generic,100,260,idle
+SN-PR-005,Printer-5,Lab C,Generic,100,260,idle
+SN-PR-006,Printer-6,Lab C,Generic,100,260,idle
